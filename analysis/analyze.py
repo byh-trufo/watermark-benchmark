@@ -1,106 +1,131 @@
 """
-SPDX-FileCopyrightText: © 2024 Trufo™ <tech@trufo.ai>
+SPDX-FileCopyrightText: © 2024 Trufo™ <engineering@trufo.ai>
 SPDX-License-Identifier: MIT
 
 Summary statistics for a watermark.
 """
 
+import os
+import glob
+from typing import Union
+
 import numpy as np
 import pandas as pd
 
-from benchmark import robustness
+from benchmark import durability
+from benchmark.image.edit import ImageEditParams
+from bench import BenchmarkEvaluation
 
 
-def summarize_image(df):
-    df = df.loc[df['content_format'].apply(lambda x: x.split('/')[0]) == 'image']
-    df = df[~df['error']]
+class ImageAnalysis():
+    """
+    Analyze raw benchmark data.
+    """
+    def __init__(self, input: Union[str, pd.DataFrame]):
+        # parsing input
+        if isinstance(input, str):
+            df_files = glob.glob(f"{os.getcwd()}/results/{input}.json")
 
-    # basic encoding + decoding
-    edf = df[df['operation'] == "encode"][[
-        'watermark', 'dataset', 'evaluation', 'content_id',
-        'content_dimensions', 'time_taken_ms', 'error',
-        'psnr', 'ssim', 'tpcp',
-    ]]
-    edf['content_size'] = edf['content_dimensions'].apply(lambda x: np.round(np.sqrt(x[0] * x[1])).astype(int))
+            dfs = []
+            for df_file in df_files:
+                dfs.append(pd.read_json(df_file))
+            df = pd.concat(dfs)
+        else:
+            df = input
+        
+        # pruning dataframe
+        df = df.loc[df['dataset'].apply(lambda x: 'IMG' in x)]
+        df = df[~df['error']]
+        self.df = df
 
-    basic_edit_types = [type(edit).__name__ for edit in robustness.image_edits(robustness.ImageEvaluation.V1_BASIC)]
-    ddf = df[df['edit_type'].isin(basic_edit_types)]
-    ddf_png = ddf[ddf['edit_parameters'].apply(lambda x: len(x) == 0)][[
-        'watermark', 'dataset', 'evaluation', 'content_id',
-        'detected', 'decoded',
-    ]]
-    ddf_jpg = ddf[ddf['edit_parameters'].apply(lambda x: len(x) == 1)][[
-        'watermark', 'dataset', 'evaluation', 'content_id',
-        'detected', 'decoded',
-    ]]
-    ddf = pd.merge(ddf_png, ddf_jpg, how='outer', on=['watermark', 'dataset', 'evaluation', 'content_id'], suffixes=['_png', '_jpg'])
+        self.summarize_per()
+        self.summarize_edit()
+        self.summarize_score()
+    
+    @staticmethod
+    def get_evaluation_subset(df: pd.DataFrame, evaluation: BenchmarkEvaluation):
+        return df[(df['edit_type'] != '') & (df['evaluation'] == evaluation.value)]
 
-    xdf = pd.merge(edf, ddf, how='left', on=['watermark', 'dataset', 'evaluation', 'content_id'])
+    def summarize_per(self):
+        """
+        Get a per-(watermark, dataset, evaluation, content_id) summary, with both encoding and decoding metrics.
+        """
+        # encoding metrics
+        xdf = self.df[self.df['operation'] == "encode"][[
+            'watermark', 'dataset', 'evaluation', 'content_id',
+            'content_dimensions', 'time_taken_ms', 'error',
+            'psnr', 'ssim', 'pcpa',
+        ]]
+        def get_size(shape):
+            if len(shape) >= 2:
+                return np.round(np.sqrt(np.prod(shape[:2]))).astype(int)
+            return 0
+        xdf['content_size'] = xdf['content_dimensions'].apply(get_size)
 
-    ddf_all = df[df['operation'] == "decode"].copy()
-    ddf_all['count'] = 1
-    ddf_all = ddf_all[[
-        'watermark', 'dataset', 'evaluation', 'content_id',
-        'detected', 'decoded', 'count',
-    ]].groupby(['watermark', 'dataset', 'evaluation', 'content_id']).sum()
+        # decoding metrics
+        ddf_all = self.df[self.df['operation'] == "decode"].copy()
+        ddf_all['total'] = 1
+        ddf_all = ddf_all[[
+            'watermark', 'dataset', 'evaluation', 'content_id',
+            'detected', 'decoded', 'total',
+        ]].groupby(['watermark', 'dataset', 'evaluation', 'content_id']).sum()
+        xdf = pd.merge(xdf, ddf_all, how='left', on=['watermark', 'dataset', 'evaluation', 'content_id'])
 
-    xdf = pd.merge(xdf, ddf_all, how='left', on=['watermark', 'dataset', 'evaluation', 'content_id'])
+        self.df_per = xdf
 
-    # basic by edit type
-    ydf = df.copy()
-    ydf = pd.merge(ydf, xdf[[
-        'watermark', 'dataset', 'evaluation', 'content_id', 'content_size',
-    ]], how='left', on=['watermark', 'dataset', 'evaluation', 'content_id',])
-    ydf['count'] = 1
-    ydf['ntime'] = ydf['time_taken_ms'] / (256 + ydf['content_size'])
+    def summarize_edit(self):
+        """
+        Get a per-edit breakdown, per-(watermark, dataset, evaluation).
+        """
+        # preprocessing
+        ydf = self.df.copy()
+        ydf = pd.merge(ydf, self.df_per[[
+            'watermark', 'dataset', 'evaluation', 'content_id', 'content_size',
+        ]], how='left', on=['watermark', 'dataset', 'evaluation', 'content_id',])
+        ydf['count'] = 1
+        ydf['ntime'] = ydf['time_taken_ms'] / (256 + ydf['content_size'])
 
-    ydf = ydf[[
-        'watermark', 'dataset', 'evaluation', 'edit_type',
-        'error', 'detected', 'decoded', 'count', 'ntime',
-    ]].groupby(['watermark', 'dataset', 'evaluation', 'edit_type']).sum()
-    ydf['ntime'] /= ydf['count']
+        # aggregating
+        ydf = ydf[[
+            'watermark', 'dataset', 'evaluation', 'edit_type',
+            'error', 'detected', 'decoded', 'count', 'ntime',
+        ]].groupby(['watermark', 'dataset', 'evaluation', 'edit_type']).sum()
+        ydf['ntime'] /= ydf['count']
 
-    ### composite score
+        self.df_edit = ydf
+    
+    def summarize_score(self):
+        """
+        Get top-line scores, per-(watermark, dataset, evaluation).
+        """
+        # encoding composite
+        enc_zdf = self.df_per.copy()
+        enc_zdf['enc_count'] = 1
+        enc_zdf['enc_ntime'] = enc_zdf['time_taken_ms'] / (256 + enc_zdf['content_size'])
+        enc_zdf['enc_psnr'] = enc_zdf['psnr']
+        enc_zdf['enc_ssim'] = enc_zdf['ssim']
+        enc_zdf['enc_pcpa'] = 10. / (10. + enc_zdf['pcpa'])
 
-    # encoding
-    enc_zdf = xdf.copy()
-    enc_zdf['enc_count'] = 1
-    enc_zdf['enc_ntime'] = enc_zdf['time_taken_ms'] / (256 + enc_zdf['content_size'])
-    enc_zdf['enc_psnr'] = enc_zdf['psnr']
+        enc_zdf = enc_zdf[[
+            'watermark', 'dataset', 'evaluation', 'enc_count', 'enc_ntime', 'enc_psnr', 'enc_ssim', 'enc_pcpa',
+        ]].groupby(['watermark', 'dataset', 'evaluation']).sum()
+        enc_zdf['enc_psnr'] = enc_zdf['enc_psnr'] / enc_zdf['enc_count']
+        enc_zdf['enc_sdsm'] = -np.log2(1. - enc_zdf['enc_ssim'] / enc_zdf['enc_count'])
+        enc_zdf['enc_pcpa'] = 10. / (enc_zdf['enc_pcpa'] / enc_zdf['enc_count']) - 10.
 
-    enc_zdf['enc_tpcp'] = 10. / (10. + enc_zdf['tpcp'])
+        zdf = enc_zdf[['enc_count', 'enc_ntime', 'enc_psnr', 'enc_sdsm', 'enc_pcpa']]
 
-    enc_zdf = enc_zdf[[
-        'watermark', 'dataset', 'evaluation', 'enc_count', 'enc_ntime', 'enc_psnr', 'enc_tpcp',
-    ]].groupby(['watermark', 'dataset', 'evaluation']).sum()
-    enc_zdf['enc_psnr'] = enc_zdf['enc_psnr'] / enc_zdf['enc_count']
-    enc_zdf['enc_tpcp'] = 10. / (enc_zdf['enc_tpcp'] / enc_zdf['enc_count']) - 10.
+        # decoding composite
+        dec_zdf = self.df_edit.reset_index()
+        dec_zdf = dec_zdf[dec_zdf['edit_type'] != '']
+        dec_zdf['dec_ntime'] = dec_zdf['ntime'] * dec_zdf['count']
+        dec_zdf = dec_zdf.groupby(['watermark', 'dataset', 'evaluation']).sum()
+        dec_zdf['dec_count'] = dec_zdf['count']
+        dec_zdf['dec_ntime'] = dec_zdf['dec_ntime'] / dec_zdf['count']
+        dec_zdf['dec_score'] = dec_zdf['decoded'] / dec_zdf['count'] * 100
 
-    zdf = enc_zdf[['enc_count', 'enc_ntime', 'enc_psnr', 'enc_tpcp']]
+        zdf = pd.merge(zdf, dec_zdf[[
+            'dec_count', 'dec_ntime', 'dec_score',
+        ]], how='outer', on=['watermark', 'dataset', 'evaluation'])
 
-    # decoding
-    dec_zdf = ydf.reset_index()
-    dec_zdf = dec_zdf[dec_zdf['edit_type'].isin(["BASE"])]
-    dec_zdf['dec_ntime'] = dec_zdf['ntime'] * dec_zdf['count']
-    dec_zdf = dec_zdf.groupby(['watermark', 'dataset', 'evaluation']).sum()
-    dec_zdf['dec_base_count'] = dec_zdf['count']
-    dec_zdf['dec_base_ntime'] = dec_zdf['dec_ntime'] / dec_zdf['count']
-    dec_zdf['dec_base_score'] = dec_zdf['decoded'] / dec_zdf['count'] * 100
-
-    zdf = pd.merge(zdf, dec_zdf[[
-        'dec_base_count', 'dec_base_ntime', 'dec_base_score',
-    ]], how='outer', on=['watermark', 'dataset', 'evaluation'])
-
-    dec_zdf = ydf.reset_index()
-    dec_zdf = dec_zdf[~dec_zdf['edit_type'].isin(["", "BASE"])].reset_index()
-    dec_zdf['dec_ntime'] = dec_zdf['ntime'] * dec_zdf['count']
-    dec_zdf = dec_zdf.groupby(['watermark', 'dataset', 'evaluation']).sum()
-    dec_zdf['dec_edit_count'] = dec_zdf['count']
-    dec_zdf['dec_edit_ntime'] = dec_zdf['dec_ntime'] / dec_zdf['count']
-    dec_zdf['dec_edit_score'] = dec_zdf['decoded'] / dec_zdf['count'] * 100
-
-    zdf = pd.merge(zdf, dec_zdf[[
-        'dec_edit_count', 'dec_edit_ntime', 'dec_edit_score',
-    ]], how='outer', on=['watermark', 'dataset', 'evaluation'])
-
-    return (xdf, ydf, zdf)
+        self.df_score = zdf

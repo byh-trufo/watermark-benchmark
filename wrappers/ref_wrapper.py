@@ -1,5 +1,5 @@
 """
-SPDX-FileCopyrightText: © 2024 Trufo™ <tech@trufo.ai>
+SPDX-FileCopyrightText: © 2024 Trufo™ <engineering@trufo.ai>
 SPDX-License-Identifier: MIT
 
 Wrapper class for the open-source invisible-watermark library.
@@ -66,15 +66,15 @@ class IMWrapper(ImageWrapper):
 
 
 class DDWrapper(IMWrapper):
-    name = "IM_DWTDCT"
+    name = "REF_DWTDCT"
     mode = 'dwtDct'
 
 class DDSWrapper(IMWrapper):
-    name = "IM_DWTDCTSVD"
+    name = "REF_DWTDCTSVD"
     mode = 'dwtDctSvd'
 
 class RGWrapper(IMWrapper):
-    name = "IM_RIVAGAN"
+    name = "REF_RIVAGAN"
     mode = 'rivaGan'
 
     def encode(self, *args, **kwargs):

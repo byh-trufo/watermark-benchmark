@@ -1,5 +1,5 @@
 """
-SPDX-FileCopyrightText: © 2024 Trufo™ <tech@trufo.ai>
+SPDX-FileCopyrightText: © 2024 Trufo™ <engineering@trufo.ai>
 SPDX-License-Identifier: MIT
 
 Image edits, alterations.
