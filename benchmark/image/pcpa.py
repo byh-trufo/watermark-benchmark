@@ -1,8 +1,8 @@
 """
-SPDX-FileCopyrightText: © 2023 Trufo™ <tech@trufo.ai> All Rights Reserved
-SPDX-License-Identifier: UNLICENSED
+SPDX-FileCopyrightText: © 2024 Trufo™ <engineering@trufo.ai>
+SPDX-License-Identifier: MIT
 
-Trufo's perceptibility measure.
+Trufo's perceptibility measure, version A.
 """
 
 from typing import Dict
@@ -18,7 +18,7 @@ FIXED_SIZE = 512
 EPS = 0.0001
 CCC = 10.
 _leps = np.log2(1. / EPS)
-MAX_TPCP = np.abs(_leps) * _leps / (CCC + _leps * _leps)
+MAX_PCPA = np.abs(_leps) * _leps / (CCC + _leps * _leps)
 
 
 def blur(grid: np.ndarray, size: int) -> np.ndarray:
@@ -34,9 +34,9 @@ def sigmoid(values: np.ndarray, limit: float=1.) -> np.ndarray:
     return limit * s_values
 
 
-def calc_tpcp_channel(grid_a: np.ndarray, grid_b: np.ndarray, is_color: True) -> float:
+def calc_pcpa_channel(grid_a: np.ndarray, grid_b: np.ndarray, is_color: True) -> float:
     """
-    Calculate TPCP data for a single color channel.
+    Calculate pcpa data for a single color channel.
     """
     # with some inspiration from both PSNR and SSIM
     blend_size = 6 if is_color else 2
@@ -56,33 +56,33 @@ def calc_tpcp_channel(grid_a: np.ndarray, grid_b: np.ndarray, is_color: True) ->
     return pcp_grid
 
 
-def calc_tpcp_single(ycc_a: np.ndarray, ycc_b: np.ndarray) -> float:
+def calc_pcpa_single(ycc_a: np.ndarray, ycc_b: np.ndarray) -> float:
     """
-    Calculate TPCP data for a single view.
+    Calculate pcpa data for a single view.
     """
     # human vision resolution is ~3x lower in Cr/Cb vs. Y
-    pcp_y = calc_tpcp_channel(ycc_a[:, :, 0], ycc_b[:, :, 0], is_color=False)
-    pcp_cb = calc_tpcp_channel(ycc_a[:, :, 1], ycc_b[:, :, 1], is_color=True)
-    pcp_cr = calc_tpcp_channel(ycc_a[:, :, 2], ycc_b[:, :, 2], is_color=True)
+    pcp_y = calc_pcpa_channel(ycc_a[:, :, 0], ycc_b[:, :, 0], is_color=False)
+    pcp_cb = calc_pcpa_channel(ycc_a[:, :, 1], ycc_b[:, :, 1], is_color=True)
+    pcp_cr = calc_pcpa_channel(ycc_a[:, :, 2], ycc_b[:, :, 2], is_color=True)
 
     # adding up the various color channels
     pcp = pcp_y + pcp_cb + pcp_cr
 
     # overall measure across the full grid
-    tpcp = np.mean(np.power(pcp, 1.5))
+    pcpa = np.mean(np.power(pcp, 1.5))
 
-    return tpcp
+    return pcpa
 
 
-def calc_tpcp(image_a_bgr: np.ndarray, image_b_bgr: np.ndarray) -> float:
+def calc_pcpa(image_a_bgr: np.ndarray, image_b_bgr: np.ndarray) -> float:
     """
-    Calculate TPCP, Trufo's watermark perceptibility measure.
+    Calculate pcpa, Trufo's watermark perceptibility measure.
     """
     # original size
     image_a_ycc = utils.bgr_to_ycc(image_a_bgr)
     image_b_ycc = utils.bgr_to_ycc(image_b_bgr)
 
-    tpcp_a = calc_tpcp_single(image_a_ycc, image_b_ycc)
+    pcpa_a = calc_pcpa_single(image_a_ycc, image_b_ycc)
 
     # fixed size
     image_a_bgr = utils.resize_frame(image_a_bgr, FIXED_SIZE, FIXED_SIZE)
@@ -91,14 +91,14 @@ def calc_tpcp(image_a_bgr: np.ndarray, image_b_bgr: np.ndarray) -> float:
     image_a_ycc = utils.bgr_to_ycc(image_a_bgr)
     image_b_ycc = utils.bgr_to_ycc(image_b_bgr)
 
-    tpcp_b = calc_tpcp_single(image_a_ycc, image_b_ycc)
+    pcpa_b = calc_pcpa_single(image_a_ycc, image_b_ycc)
 
     # blending
-    tpcp = np.sqrt(tpcp_a) * 0.5 + np.sqrt(tpcp_b) * 0.5
+    pcpa = np.sqrt(pcpa_a) * 0.5 + np.sqrt(pcpa_b) * 0.5
 
     # scaling: scale from 0 to 100 (higher is better)
-    tpcp = np.log2(1. / (EPS + tpcp))
-    tpcp = np.clip(np.abs(tpcp) * tpcp / (CCC + tpcp * tpcp), 0., None)
-    tpcp *= 100. / MAX_TPCP
+    pcpa = np.log2(1. / (EPS + pcpa))
+    pcpa = np.clip(np.abs(pcpa) * pcpa / (CCC + pcpa * pcpa), 0., None)
+    pcpa *= 100. / MAX_PCPA
 
-    return tpcp
+    return pcpa

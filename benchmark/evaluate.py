@@ -1,6 +1,6 @@
 """
-SPDX-FileCopyrightText: © 2023 Trufo™ <tech@trufo.ai> All Rights Reserved
-SPDX-License-Identifier: UNLICENSED
+SPDX-FileCopyrightText: © 2024 Trufo™ <engineering@trufo.ai>
+SPDX-License-Identifier: MIT
 
 Evaluation module.
 """
@@ -8,14 +8,13 @@ Evaluation module.
 import time
 import logging
 import mimetypes
-from typing import List
 
 import numpy as np
 import cv2
 
-from benchmark import perceptibility, robustness
+from benchmark import durability, invisibility
 from benchmark.image import utils
-from benchmark.image.edit import ImageEdit, ImageEditParams
+from benchmark.image.edit import ImageEditParams
 
 from wrappers.wrapper import ImageWrapper
 
@@ -32,7 +31,7 @@ IMAGE_RESULTS = {
     'error' : False,
     'psnr' : 0.,
     'ssim' : 0.,
-    'tpcp' : 0.,
+    'pcpa' : 0.,
     'edit_type' : "",
     'edit_parameters' : {},
     'detected' : False,
@@ -43,7 +42,7 @@ IMAGE_RESULTS = {
 def evaluate_image(
     filepath: str,
     wrapper: ImageWrapper,
-    evaluation: robustness.ImageEvaluation,
+    evaluation: durability.ImageEvaluation,
     encode: bool=True,
     debug_mode: bool=False,
 ):
@@ -98,7 +97,7 @@ def evaluate_image(
                 logging.info("Dispalying the watermarked image.")
                 utils.display_frame(enc_image_bgr)
 
-            enc_result.update(perceptibility.assess_image(image_bgr, enc_image_bgr))
+            enc_result.update(invisibility.assess_image(image_bgr, enc_image_bgr))
                 
             results.append(enc_result)
 
@@ -108,7 +107,7 @@ def evaluate_image(
             enc_image_bytes = image_bytes
             enc_image_bgr = image_bgr
         
-        edits = robustness.image_edits(evaluation)
+        edits = durability.image_edits(evaluation)
             
         for edit in edits:
             edit_generator = edit.generate(enc_image_bgr)

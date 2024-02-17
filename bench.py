@@ -1,6 +1,6 @@
 """
-SPDX-FileCopyrightText: © 2023 Trufo™ <tech@trufo.ai> All Rights Reserved
-SPDX-License-Identifier: UNLICENSED
+SPDX-FileCopyrightText: © 2024 Trufo™ <engineering@trufo.ai>
+SPDX-License-Identifier: MIT
 
 Main file for running benchmark tests.
 """
@@ -14,7 +14,7 @@ import pandas as pd
 import cv2
 
 from testing.benchmark.wrappers.wrapper import ImageWrapper
-from benchmark import robustness
+from benchmark import durability
 from benchmark import evaluate
 
 
@@ -51,9 +51,9 @@ class BenchmarkEvaluation(enum.Enum):
 DEFAULT_EVALUATION = BenchmarkEvaluation.IMG_SIMPLE
 
 EVALUATION_MODES = {
-    BenchmarkEvaluation.IMG_SIMPLE: robustness.ImageEvaluation.V1_BASIC,
-    BenchmarkEvaluation.IMG_NEGATIVE: robustness.ImageEvaluation.V1_BASIC,
-    BenchmarkEvaluation.IMG_ROBUSTNESS: robustness.ImageEvaluation.V1_FULL,
+    BenchmarkEvaluation.IMG_SIMPLE: durability.ImageEvaluation.V1_BASIC,
+    BenchmarkEvaluation.IMG_NEGATIVE: durability.ImageEvaluation.V1_BASIC,
+    BenchmarkEvaluation.IMG_ROBUSTNESS: durability.ImageEvaluation.V1_FULL,
 }
 
 
@@ -69,37 +69,45 @@ def benchmark(
     wrapper_class,
     dataset: BenchmarkDataset=DEFAULT_DATASET,
     evaluation: BenchmarkEvaluation=DEFAULT_EVALUATION,
+    override: bool=False,
     debug_mode: bool=False,
 ):
     """
     Run the benchmark evaluation on a single watermark. 
     """
     if wrapper_class.TYPE == ImageWrapper.TYPE:
+        assert 'IMG' in dataset.value
+        assert 'IMG' in evaluation.value
         image_wrapper = wrapper_class()
 
-        results = []
+        out_filepath = f"{os.getcwd()}/results/{image_wrapper.name}.{dataset.value}.{evaluation.value}.json"
+        if not override and os.path.exists(out_filepath):
+            logging.info((
+                f"The results file {image_wrapper.name}.{dataset.value}.{evaluation.value} already exists. "
+                "If you would like to override the file, please set the override argument to True."
+            ))
+            return
 
         image_filepaths = glob.glob(f"{os.getcwd()}/dataset/{DATASET_FILES[dataset]}")
         logging.info(f"Running {image_wrapper.name}.{dataset.value}.{evaluation.value} on {len(image_filepaths)} images.")
 
-        if 'IMG' in evaluation.value:
-            # [TODO] multiprocessing speedup
-            for image_filepath in image_filepaths:
-                results.extend(evaluate.evaluate_image(
-                    image_filepath,
-                    image_wrapper,
-                    EVALUATION_MODES[evaluation],
-                    encode=('NEG' not in evaluation.value),
-                    debug_mode=debug_mode,
-                ))
+        # [TODO] multiprocessing speedup
+        results = []
+        for image_filepath in image_filepaths:
+            results.extend(evaluate.evaluate_image(
+                image_filepath,
+                image_wrapper,
+                EVALUATION_MODES[evaluation],
+                encode=('NEG' not in evaluation.value),
+                debug_mode=debug_mode,
+            ))
 
         if len(results) > 0:
             results = pd.DataFrame.from_dict(results)
             results['watermark'] = image_wrapper.name
             results['dataset'] = dataset.value
             results['evaluation'] = evaluation.value
-
-            results.to_json(f"{os.getcwd()}/results/{image_wrapper.name}.{dataset.value}.{evaluation.value}.json")
+            results.to_json(out_filepath)
     
     # [TODO] currently, only image functionality is supported
     else:
