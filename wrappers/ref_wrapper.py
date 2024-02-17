@@ -1,6 +1,6 @@
 """
-SPDX-FileCopyrightText: © 2024 Trufo™ <tech@trufo.ai> All Rights Reserved
-SPDX-License-Identifier: UNLICENSED
+SPDX-FileCopyrightText: © 2024 Trufo™ <tech@trufo.ai>
+SPDX-License-Identifier: MIT
 
 Wrapper class for the open-source invisible-watermark library.
 """
