@@ -1,0 +1,41 @@
+# environment
+Pipfile.lock
+
+# edited
+*~
+
+# python
+__pycache__
+./ipynb_checkpoints
+_*.ipynb
+
+# temporary
+tmp*
+
+# logs
+*.log
+
+# images
+*.png
+*.PNG
+*.jpg
+*.JPG
+*.jpeg
+*.JPEG
+*.webp
+*.WEBP
+*.gif
+*.GIF
+*.tiff
+*.TIFF
+*.heic
+*.HEIC
+*.avif
+*.AVIF
+
+# files to exclude
+dataset/*/*
+reports/*
+results/*.json
+notebooks/Pipfile*
+wrappers/trufo*
