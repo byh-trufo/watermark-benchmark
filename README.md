@@ -1,3 +1,5 @@
-Watermark evaluation tools. To be published as a standalone open-source library.
+This is an open-source library for benchmarking watermarking, developed by Trufo Inc.
 
-[TODO]
+[TODO] link to blog posts
+
+[TODO] instructions on usage
