@@ -16,7 +16,7 @@ from wrappers.wrapper import ImageWrapper
 from imwatermark import WatermarkEncoder, WatermarkDecoder
 
 
-class IMWrapper(ImageWrapper):
+class RefWrapper(ImageWrapper):
     payload_size = 32
 
     @property
@@ -65,15 +65,15 @@ class IMWrapper(ImageWrapper):
         return payload_bits
 
 
-class DDWrapper(IMWrapper):
+class DDWrapper(RefWrapper):
     name = "REF_DWTDCT"
     mode = 'dwtDct'
 
-class DDSWrapper(IMWrapper):
+class DDSWrapper(RefWrapper):
     name = "REF_DWTDCTSVD"
     mode = 'dwtDctSvd'
 
-class RGWrapper(IMWrapper):
+class RGWrapper(RefWrapper):
     name = "REF_RIVAGAN"
     mode = 'rivaGan'
 

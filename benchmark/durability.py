@@ -15,20 +15,36 @@ from benchmark.image.edit_alt import IEAlterA
 from benchmark.image.edit_cmp import IEComposeA
 
 
-class ImageEvaluation(enum.Enum):
+class ImageRobustnessTests(enum.Enum):
     V1_BASIC = 'BASIC'
+    V1_QUICK = 'QUICK'
     V1_FULL = 'FULL'
 
 
-def image_edits(image_edits: ImageEvaluation, random_seed: int=0) -> List[ImageEdit]:
+def image_edits(image_edits: ImageRobustnessTests, random_seed: int=0) -> List[ImageEdit]:
     """
     Get the list of image edits corresponding to an image evaluation mode.
     """
-    if image_edits is ImageEvaluation.V1_BASIC:
+    if image_edits is ImageRobustnessTests.V1_BASIC:
+        # 2 tests
         return [
             IEBase(random_seed)
         ]
-    if image_edits is ImageEvaluation.V1_FULL:
+    if image_edits is ImageRobustnessTests.V1_QUICK:
+        # 12 tests
+        return [
+            IEBase(random_seed),
+            IECompressJPEG(random_seed, [2, 5]),
+            IECrop(random_seed, [5]),
+            IERescale(random_seed, [7]),
+            IERotateA(random_seed, [2]),
+            IERotateB(random_seed, [2]),
+            IEFilterA(random_seed, [0]),
+            IEAlterA(random_seed, [4]),
+            IEComposeA(random_seed, [2, 5]),
+        ]
+    if image_edits is ImageRobustnessTests.V1_FULL:
+        # 60 tests
         return [
             IEBase(random_seed),
             IECompressJPEG(random_seed),
