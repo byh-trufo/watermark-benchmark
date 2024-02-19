@@ -63,8 +63,8 @@ class IECompressJPEG(ImageEdit):
     """
     Various levels of JPEG compression.
     """
-    NUM = 11
-    JPEG_QUALITY_LEVELS = [99, 95, 90, 80, 70, 60, 50, 40, 30, 20, 10]
+    NUM = 10
+    JPEG_QUALITY_LEVELS = [99, 90, 80, 70, 60, 50, 40, 30, 20, 10]
 
     def generate(self, image_bgr):
         for ind in self.indices:

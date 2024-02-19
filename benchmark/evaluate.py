@@ -42,7 +42,7 @@ IMAGE_RESULTS = {
 def evaluate_image(
     filepath: str,
     wrapper: ImageWrapper,
-    evaluation: durability.ImageEvaluation,
+    evaluation: durability.ImageRobustnessTests,
     encode: bool=True,
     debug_mode: bool=False,
 ):

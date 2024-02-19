@@ -13,7 +13,7 @@ import logging
 import pandas as pd
 import cv2
 
-from testing.benchmark.wrappers.wrapper import ImageWrapper
+from wrappers.wrapper import ImageWrapper
 from benchmark import durability
 from benchmark import evaluate
 
@@ -25,14 +25,16 @@ class BenchmarkDataset(enum.Enum):
     NONE = ''
     IMG_0 = 'IMG_0'
     IMG_1 = 'IMG_1'
-    IMG_2 = 'IMG_2'
+    IMG_VOC = 'IMG_VOC'
+    IMG_BIG = 'IMG_BIG'
 
 DEFAULT_DATASET = BenchmarkDataset.IMG_0
 
 DATASET_FILES = {
     BenchmarkDataset.IMG_0: "img_0/*",
     BenchmarkDataset.IMG_1: "img_1/*",
-    BenchmarkDataset.IMG_2: "img_2/*",
+    BenchmarkDataset.IMG_VOC: "img_voc/*",
+    BenchmarkDataset.IMG_BIG: "img_big/*",
 }
 
 
@@ -45,15 +47,18 @@ class BenchmarkEvaluation(enum.Enum):
     IMG_SIMPLE = 'IMG_SIMPLE'
     # for false positive testing
     IMG_NEGATIVE = 'IMG_NEGATIVE'
-    # full suite of ~50 robustness tests per image
+    # full suite of 60 robustness tests per image
     IMG_ROBUSTNESS = 'IMG_ROBUSTNESS'
+    # abridged suite of 12 robustness tests per image
+    IMG_ROBUSTNESS_Q = 'IMG_ROBUSTNESS_Q'
 
 DEFAULT_EVALUATION = BenchmarkEvaluation.IMG_SIMPLE
 
 EVALUATION_MODES = {
-    BenchmarkEvaluation.IMG_SIMPLE: durability.ImageEvaluation.V1_BASIC,
-    BenchmarkEvaluation.IMG_NEGATIVE: durability.ImageEvaluation.V1_BASIC,
-    BenchmarkEvaluation.IMG_ROBUSTNESS: durability.ImageEvaluation.V1_FULL,
+    BenchmarkEvaluation.IMG_SIMPLE: durability.ImageRobustnessTests.V1_BASIC,
+    BenchmarkEvaluation.IMG_NEGATIVE: durability.ImageRobustnessTests.V1_BASIC,
+    BenchmarkEvaluation.IMG_ROBUSTNESS: durability.ImageRobustnessTests.V1_FULL,
+    BenchmarkEvaluation.IMG_ROBUSTNESS_Q: durability.ImageRobustnessTests.V1_QUICK,
 }
 
 
