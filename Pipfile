@@ -4,13 +4,16 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-pandas = "*"
+invisible-watermark = "*"
+ipython = "*"
+jupyterlab = "*"
+matplotlib = "*"
+nest-asyncio = "*"
 numpy = "*"
 opencv-python-headless = "*"
-invisible-watermark = "*"
-scikit-image = "*"
-ipython = "*"
+pandas = "*"
 pyarrow = "*"
+scikit-image = "*"
 
 [dev-packages]
 
