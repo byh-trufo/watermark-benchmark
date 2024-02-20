@@ -109,6 +109,7 @@ class ImageAnalysis():
         enc_zdf = enc_zdf[[
             'watermark', 'dataset', 'evaluation', 'enc_count', 'enc_ntime', 'enc_psnr', 'enc_ssim', 'enc_pcpa',
         ]].groupby(['watermark', 'dataset', 'evaluation']).sum()
+        enc_zdf['enc_ntime'] = enc_zdf['enc_ntime'] / enc_zdf['enc_count']
         enc_zdf['enc_psnr'] = enc_zdf['enc_psnr'] / enc_zdf['enc_count']
         enc_zdf['enc_sdsm'] = -10 * np.log(1. - enc_zdf['enc_ssim'] / enc_zdf['enc_count'])
         enc_zdf['enc_pcpa'] = 10. / (enc_zdf['enc_pcpa'] / enc_zdf['enc_count']) - 10.
