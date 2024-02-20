@@ -1,6 +1,6 @@
 This is an open-source library for benchmarking watermarking, developed by Trufo Inc. An [overview](https://medium.com/p/436cbf1bd9ca) of the library is on Trufo's blog.
 
-# Instructions #
+### Get Started ###
 
 To begin, clone the repository and download the [datasets](https://drive.google.com/drive/folders/1P3X_-_Ug8fewCxd-a_66Pumr9BsHmsqf?usp=sharing) into the `dataset/` folder.
 
